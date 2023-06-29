@@ -7,6 +7,8 @@ import swaggerJsDoc from "swagger-jsdoc";
 import hpp from "hpp"
 // import { options } from "../docs/swagger";
 
+import AuthRoutes from '../routes/User.route'
+
 export default async (app: Application) => {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
@@ -28,7 +30,7 @@ export default async (app: Application) => {
     res.sendStatus(200);
   });
 
-//   app.use("/api/vendors", VendorRoutes);
+  app.use("/api/auth", AuthRoutes);
 
   // Error handler
   app.use(notFound);

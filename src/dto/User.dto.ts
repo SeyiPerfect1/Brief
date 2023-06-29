@@ -20,7 +20,13 @@ export const UserRegisterInputSchema = object({
 export interface IUserUpdateInput {
   firstName?: string;
   lastName?: string;
+  image?: string;
 }
+
+export interface IUserPayload {
+    _id: string;
+  }
+  
 
 export interface IUserResendConfirm{
   email: string;
