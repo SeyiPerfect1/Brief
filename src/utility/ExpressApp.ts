@@ -8,6 +8,7 @@ import hpp from "hpp"
 // import { options } from "../docs/swagger";
 
 import AuthRoutes from '../routes/User.route'
+import ShortnerRoutes from '../routes/URL.route'
 
 export default async (app: Application) => {
   app.use(express.json());
@@ -31,6 +32,8 @@ export default async (app: Application) => {
   });
 
   app.use("/api/auth", AuthRoutes);
+  app.use("/api/shortner", ShortnerRoutes);
+
 
   // Error handler
   app.use(notFound);
