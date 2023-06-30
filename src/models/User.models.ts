@@ -9,6 +9,7 @@ interface UserDoc extends Document {
   image: string;
   confirmationCode: string;
   status: string;
+  URLs: string[];
 }
 
 const UserSchema: Schema = new mongoose.Schema<UserDoc>(
@@ -54,6 +55,12 @@ const UserSchema: Schema = new mongoose.Schema<UserDoc>(
       enum: ["Pending", "Active"],
       default: "Pending",
     },
+    URLs: [
+        {
+          type: Schema.Types.ObjectId,
+          ref: "URL",
+        },
+      ],
   },
   {
     timestamps: true,

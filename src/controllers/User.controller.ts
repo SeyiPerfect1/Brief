@@ -75,18 +75,18 @@ export const RegisterUser = async (
  * @route /api/auth/confirm/:confirmationCode
  * @access public
  */
-export const verifyBuyer = asyncHandler(async (req: Request, res: Response) => {
+export const verifyUser = asyncHandler(async (req: Request, res: Response) => {
   try {
     const { confirmationCode } = req.params;
-    const confirmBuyer = await UserModel.findOne({ confirmationCode });
-    if (confirmBuyer === null) {
+    const confirmUser = await UserModel.findOne({ confirmationCode });
+    if (confirmUser === null) {
       res.status(400).send({ msg: "Invalid Verification Code" });
       return;
     }
-    confirmBuyer.status = "Active";
-    confirmBuyer.confirmationCode = "";
+    confirmUser.status = "Active";
+    confirmUser.confirmationCode = "";
 
-    await confirmBuyer.save();
+    await confirmUser.save();
 
     res.status(200).json({
       msg: "Verification Successful.You can now login",
@@ -104,7 +104,7 @@ export const verifyBuyer = asyncHandler(async (req: Request, res: Response) => {
  * @route /api/users/resend-confirm
  * @access public
  */
-export const resendBuyerVerificionLink = asyncHandler(
+export const resendUserVerificionLink = asyncHandler(
   async (req: Request, res: Response) => {
     const { email } = <IUserResendConfirm>req.body;
 
@@ -155,7 +155,7 @@ export const resendBuyerVerificionLink = asyncHandler(
  *@returns {object} token, details
  */
 
-export async function buyerLogin(req: Request, res: Response) {
+export async function userLogin(req: Request, res: Response) {
   // retrieve the email and password from the request body
   const { email, password } = req.body;
 
@@ -196,7 +196,7 @@ export async function buyerLogin(req: Request, res: Response) {
       firstname: user?.firstName,
       lastname: user?.lastName,
       email: user?.email,
-      token: await signToken({ id: user.id, role: "Buyer" }),
+      token: await signToken({ id: user.id }),
     });
   } catch (error: any) {
     log.error(error)

@@ -1,11 +1,11 @@
 import express from 'express';
 import {
   RegisterUser,
-  verifyBuyer,
-  buyerLogin,
+  verifyUser,
+  userLogin,
   googleAuth,
   updateUserProfile,
-  resendBuyerVerificionLink,
+  resendUserVerificionLink,
   forgotPassword,
   resetPassword,
 } from '../controllers/User.controller';
@@ -20,9 +20,9 @@ const router = express.Router();
 
 
 router.post('/register', validate(UserRegisterInputSchema), RegisterUser);
-router.get('/confirm/:confirmationCode', verifyBuyer);
-router.post('/resend-confirm', resendBuyerVerificionLink);
-router.post('/login', validate(userLoginInputSchema), buyerLogin);
+router.get('/confirm/:confirmationCode', verifyUser);
+router.post('/resend-confirm', resendUserVerificionLink);
+router.post('/login', validate(userLoginInputSchema), userLogin);
 router.post('/google', googleAuth);
 router.put('/update', Authenticate, updateUserProfile)
 router.post('/forgot-password', forgotPassword);
