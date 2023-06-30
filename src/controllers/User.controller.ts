@@ -70,23 +70,23 @@ export const RegisterUser = async (
 };
 
 /**
- * @description Verify Buyer account
+ * @description Verify User account
  * @method GET
  * @route /api/auth/confirm/:confirmationCode
  * @access public
  */
-export const verifyBuyer = asyncHandler(async (req: Request, res: Response) => {
+export const verifyUser = asyncHandler(async (req: Request, res: Response) => {
   try {
     const { confirmationCode } = req.params;
-    const confirmBuyer = await UserModel.findOne({ confirmationCode });
-    if (confirmBuyer === null) {
+    const confirmUser = await UserModel.findOne({ confirmationCode });
+    if (confirmUser === null) {
       res.status(400).send({ msg: "Invalid Verification Code" });
       return;
     }
-    confirmBuyer.status = "Active";
-    confirmBuyer.confirmationCode = "";
+    confirmUser.status = "Active";
+    confirmUser.confirmationCode = "";
 
-    await confirmBuyer.save();
+    await confirmUser.save();
 
     res.status(200).json({
       msg: "Verification Successful.You can now login",
@@ -99,33 +99,33 @@ export const verifyBuyer = asyncHandler(async (req: Request, res: Response) => {
 });
 
 /**
- * @description Resend verification link to Buyer's email
+ * @description Resend verification link to User's email
  * @method POST
  * @route /api/users/resend-confirm
  * @access public
  */
-export const resendBuyerVerificionLink = asyncHandler(
+export const resendUserVerificionLink = asyncHandler(
   async (req: Request, res: Response) => {
-    const { email } = <IBuyerResendConfirm>req.body;
+    const { email } = <IUserResendConfirm>req.body;
 
     try {
-      const buyer = await BuyerModel.findOne({ email: email.toLowerCase() });
-      if (!buyer) {
+      const user = await UserModel.findOne({ email: email.toLowerCase() });
+      if (!user) {
         res.status(400).send({ msg: "User does not exist" });
         return;
       }
 
       //send confirmation code to buyer's email
-      const name = `${buyer.firstName} ${buyer.lastName}`;
+      const name = `${user.firstName} ${user.lastName}`;
       const userType = "buyers";
       const message = `<h1>Email Confirmation</h1>
     <h2>Hello ${name}</h2>
     <p>Verify your email address to complete the signup and login to your account</p>
-    <a href=${config.BASE_URL}/api/${userType}/confirm/${buyer?.confirmationCode}> Click here</a>`;
+    <a href=${config.BASE_URL}/api/${userType}/confirm/${user?.confirmationCode}> Click here</a>`;
       const subject = "Please confirm your account";
       let ress = await sendConfirmationEmail(
         name,
-        buyer?.email,
+        user?.email,
         subject,
         message
       );
@@ -148,14 +148,14 @@ export const resendBuyerVerificionLink = asyncHandler(
 );
 
 /*
- *@description Login into Buyer account
+ *@description Login into User account
  *@static
  *@param  {Object} req - request
  *@param  {object} res - response
  *@returns {object} token, details
  */
 
-export async function buyerLogin(req: Request, res: Response) {
+export async function userLogin(req: Request, res: Response) {
   // retrieve the email and password from the request body
   const { email, password } = req.body;
 
@@ -164,7 +164,7 @@ export async function buyerLogin(req: Request, res: Response) {
       res.status(401).send({ message: "Kindly fill all required information" });
     }
     // find the email and check if they exist.
-    const user = await BuyerModel.findOne({ email }).select("+password").exec();
+    const user = await UserModel.findOne({ email }).select("+password").exec();
 
     if (!user) {
       return res
@@ -195,9 +195,8 @@ export async function buyerLogin(req: Request, res: Response) {
       id: user?._id,
       firstname: user?.firstName,
       lastname: user?.lastName,
-      gender: user?.gender,
       email: user?.email,
-      token: await signToken({ id: user.id, role: "Buyer" }),
+      token: await signToken({ id: user.id }),
     });
   } catch (error: any) {
     log.error(error)
@@ -226,7 +225,7 @@ export async function googleAuth(req: Request, res: Response) {
       `https://www.googleapis.com/oauth2/v3/userinfo?access_token=${token}`
     );
 
-    user = await BuyerModel.findOne({ email: google.data.email });
+    user = await UserModel.findOne({ email: google.data.email });
 
     if (user) {
       const TokenData = {
@@ -258,7 +257,7 @@ export async function googleAuth(req: Request, res: Response) {
         password: code,
       };
 
-      user = await BuyerModel.create(userObject);
+      user = await UserModel.create(userObject);
       const TokenData = {
         id: user._id,
         email: user.email,
@@ -287,21 +286,19 @@ export async function googleAuth(req: Request, res: Response) {
 /**
  * @description Update Buyer Profile
  * @method GET
- * @route /api/buyers/confirm/:confirmationCode
- * @access private/buyers
+ * @route /api/auth/confirm/:confirmationCode
+ * @access private
  */
-export const updateBuyerProfile = asyncHandler(
+export const updateUserProfile = asyncHandler(
   async (req: Request, res: Response) => {
-    const buyer = await BuyerModel.findById(req.user.id);
+    const buyer = await UserModel.findById(req.user.id);
 
-    const { firstName, lastName, phone, address } = <IBuyerUpdateInput>req.body;
+    const { firstName, lastName, image } = <IUserUpdateInput>req.body;
 
     if (buyer) {
       buyer.firstName = firstName || buyer.firstName;
       buyer.lastName = lastName || buyer.lastName;
-      // buyer.image = image || buyer.image;
-      buyer.address = address || buyer.address;
-      buyer.phone = phone || buyer.phone;
+      buyer.image = image || buyer.image;
 
       const updatedBuyer = await buyer.save();
 
@@ -317,16 +314,16 @@ export const updateBuyerProfile = asyncHandler(
 
 
 /**
- * @description Buyer Forgot Password
+ * @description User Forgot Password
  * @method POST
- * @route /api/buyers/forgotpassword
+ * @route /api/auth/forgotpassword
  * @access public
  */
 
 export const forgotPassword = async(req: Request, res: Response) => {
   try{
     const { email } = req.body
-    const checkEmail: any = await BuyerModel.findOne({ email })
+    const checkEmail: any = await UserModel.findOne({ email })
     if(!checkEmail){
       return res.status(400).json({
         message: "No User With This Email"
@@ -373,17 +370,17 @@ export const forgotPassword = async(req: Request, res: Response) => {
 
 
 /**
- * @description Buyer Reset Password
+ * @description User Reset Password
  * @method POST
- * @route /api/buyers/restpassword
+ * @route /api/auth/restpassword
  * @access public
  */
 
 export const resetPassword = async(req: Request, res: Response) => {
   try{
     const { id, token } = req.params;
-    const { password, confirmPassword } = <IBuyerResetPassword> req.body;
-    const user: any = await BuyerModel.findById(id).exec();
+    const { password, confirmPassword } = <IUserResetPassword> req.body;
+    const user: any = await UserModel.findById(id).exec();
     if(user === null){
       return res.status(400).json({
         message: "No User With This Id"
