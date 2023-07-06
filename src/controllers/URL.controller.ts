@@ -103,7 +103,7 @@ export const inputURL = async (
 /**
  * @description redirect to Original URL
  * @method GET
- * @route /api/shortner/:shordcode
+ * @route /api/shortner/:shortCode
  * @access public
  */
 export const getOriginalURL = async (req: Request, res: Response) => {
@@ -141,92 +141,6 @@ export const getOriginalURL = async (req: Request, res: Response) => {
   } catch (error: any) {
     res.status(500).send({ msg: "Something went wrong! Please try again" });
   }
-
-  // Check if the short URL exists in the cache
-  // try {
-  //   const session = await mongoose.startSession();
-  //   session.startTransaction();
-
-  //   try {
-  //     // Check if the short URL exists in the cache
-  //     const cachedOriginalURL = await getValuesFromRedis(shortCode);
-
-  //     // Track the click
-  //     const { "user-agent": userAgent } = req.headers;
-
-  //     // Get the user's IP address
-  //     const ipAddress = req.ip;
-
-  //     let URL = null; // Initialize URL variable with default value
-
-  //     if (Object.keys(cachedOriginalURL as object).length !== 0) {
-  //       // Redirect to the original URL from the cache
-  //       res.redirect((cachedOriginalURL as any).originalURL);
-  //     } else {
-  //       // Find the URL mapping in the database
-  //       URL = await URLModel.findOne({ shortCode }).session(session);
-
-  //       if (!URL) {
-  //         return res.status(404).json({ msg: "URL not found" });
-  //       }
-
-  //       // Use an IP geolocation service API to get location data
-  //       const geolocationResponse = await axios.get(
-  //         `https://api.ip2location.io/?key=${
-  //           CONFIG.GEO_API_KEY as string
-  //         }&ip=${ipAddress}`
-  //       );
-
-  //       // Extract relevant location information from the response
-  //       const {
-  //         county_code: countryCode,
-  //         country_name: country,
-  //         region_name: region,
-  //         city_name: city,
-  //         latitude,
-  //         longitude,
-  //         zip_code: zipCode,
-  //         time_zone: timeZone,
-  //       } = geolocationResponse.data;
-
-  //       // Store the click information in the URL document
-  //       URL.clicks.push({
-  //         userAgent,
-  //         countryCode,
-  //         country,
-  //         region,
-  //         city,
-  //         latitude,
-  //         longitude,
-  //         zipCode,
-  //         timeZone,
-  //       });
-
-  //       await URL.save();
-  //     }
-
-  //     // Store the original URL in the cache
-  //     const value = await setValuesInRedis(shortCode, {
-  //       originalURL: URL.originalURL,
-  //       qrCodeImage: URL.qrCodeImage,
-  //     });
-
-  //     await session.commitTransaction();
-  //     session.endSession();
-
-  //     console.log("Value set successfully", value);
-
-  //     // Redirect to the original URL
-  //     res.redirect(URL.originalURL);
-  //   } catch (error: any) {
-  //     await session.abortTransaction();
-  //     session.endSession();
-  //     throw error;
-  //   }
-  // } catch (error: any) {
-  //   console.error("Error retrieving original URL:", error);
-  //   res.status(500).send({ msg: "Something went wrong! Please try again" });
-  // }
 };
 
 /**
@@ -242,7 +156,7 @@ export const getURLAnalytics = async (req: Request, res: Response) => {
     const URL = await URLModel.findOne({ shortCode });
 
     if (!URL) {
-      return res.status(404).json({ error: "URL not found" });
+      return res.status(404).json({ msg: "URL not found" });
     }
 
     // Return the analytics data

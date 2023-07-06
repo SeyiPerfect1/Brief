@@ -5,7 +5,7 @@ import { errorHandler, notFound } from "../middlewares";
 import swaggerUI from "swagger-ui-express";
 import swaggerJsDoc from "swagger-jsdoc";
 import hpp from "hpp";
-// import { options } from "../docs/swagger";
+import { options } from "../docs/swagger";
 
 import AuthRoutes from "../routes/User.route";
 import ShortnerRoutes from "../routes/URL.route";
@@ -25,9 +25,9 @@ export default async (app: Application) => {
 
   app.set("trust proxy", true);
 
-  //setting up swagger doc
-  // const specs = swaggerJsDoc(options);
-  // app.use("/api/docs", swaggerUI.serve, swaggerUI.setup(specs));
+  // setting up swagger doc
+  const specs = swaggerJsDoc(options);
+  app.use("/api/docs", swaggerUI.serve, swaggerUI.setup(specs));
 
   app.get("/healthcheck", (req: Request, res: Response) => {
     res.sendStatus(200);
