@@ -1,31 +1,39 @@
 import mongoose, { Document, Schema } from "mongoose";
 import bcrypt from "bcryptjs";
 
-interface URLDoc extends Document {
-  shortURL: string;
+export interface URLDoc extends Document {
+  shortCode: string;
   originalURL: string;
   clicks: {}[];
-  customDomain: string,
-  customPath: string,
+  customDomain: string;
+  qrCodeImage: string;
 }
 
 const URLSchema: Schema = new mongoose.Schema<URLDoc>(
   {
-    shortURL: {
+    shortCode: {
       type: String,
-      required: [true, "shortURL required"],
+      required: [true, "shortCode required"],
+      unique: true,
     },
     originalURL: {
       type: String,
       required: [true, "URL required"],
     },
     customDomain: String,
-    customPath: String,
+    qrCodeImage: String,
     clicks: [
       {
         timestamp: { type: Date, default: Date.now },
-        referrer: String,
         userAgent: String,
+        countryCode: String,
+        country: String,
+        region: String,
+        city: String,
+        latitude: String,
+        longitude: String,
+        zipCode: String,
+        timeZone: String,
       },
     ],
   },
@@ -34,20 +42,5 @@ const URLSchema: Schema = new mongoose.Schema<URLDoc>(
   }
 );
 
-// // Encrypt password with bcrypt
-// UserSchema.pre("save", async function (next) {
-//   try {
-//     if (!this.isModified("password")) return next();
-//     this.password = await bcrypt.hash(this.password, 12);
-//     // this.confirmationCode = await bcrypt.hash(
-//     //   this.password,
-//     //   process.env.HASH_SALT || 10
-//     // );
-//   } catch (error: any) {
-//     throw new Error(error);
-//   }
-// });
+export const URLModel = mongoose.model<URLDoc>("URL", URLSchema);
 
-const URLModel = mongoose.model<URLDoc>("URL", URLSchema);
-
-export default URLModel;

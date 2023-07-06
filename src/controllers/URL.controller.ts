@@ -1,13 +1,18 @@
 import { Request, Response } from "express";
 import asyncHandler from "express-async-handler";
-import URLModel from "../models/URL.models";
-import { IURLInput } from "../dto/URL.dto";
+import { URLModel, URLDoc } from "../models/URL.models";
+import { IURLInput, URLCreateDetails, cachedShortURL } from "../dto/URL.dto";
 import shortid from "shortid";
 import CONFIG from "../config/environment";
 import UserModel from "../models/User.models";
 import axios from "axios";
-import redisClient from "../config/redisConfig";
-import { promisify } from "util";
+import {
+  renderRedis,
+  getValuesFromRedis,
+  setValuesInRedis,
+} from "../config/redisConfig";
+import mongoose from "mongoose";
+import { clickDetails } from "../utility/clickDetails";
 
 /**
  * @description shorten URL
@@ -20,40 +25,30 @@ export const inputURL = async (
   req: Request<{}, {}, IURLInput["body"]>,
   res: Response
 ) => {
-  const { originalURL, customDomain, customPath } = req.body;
-
-  const redisGetAsync = promisify(redisClient.get).bind(redisClient);
-  const redisSetAsync = promisify(redisClient.set).bind(redisClient);
+  const { originalURL, customDomain } = req.body;
 
   try {
     // Check if the URL already exists in the cache
-    const cachedShortURL = await redisGetAsync(originalURL);
+    const cachedShortURL = await getValuesFromRedis(originalURL);
 
-    if (cachedShortURL) {
+    if (Object.keys(cachedShortURL as object).length !== 0) {
       // Return the cached short URL
-      res.json({ shortUrl: cachedShortURL });
+      return res.status(200).send(cachedShortURL);
     } else {
       // Generate a short code using shortid
       const shortCode = shortid.generate();
 
-      // Save the URL mapping to the database
-      await URLModel.create({
-        originalURL,
-        shortCode,
-        customDomain,
-        customPath,
-      });
-
-      // Store the shortened URL in the cache
-      await redisSetAsync(
-        originalURL,
-        `http://${customDomain}/${customPath || shortCode}`
-      );
+      let shortURL: string;
+      if (customDomain) {
+        shortURL = `https://${customDomain}/${shortCode}`;
+      } else {
+        shortURL = `${CONFIG.BASE_URL}/${shortCode}`;
+      }
 
       // Generate QR code using QRCode Monkey API
       const apiUrl = "https://api.qrcode-monkey.com/qr/custom";
       const qrCodePayload = {
-        data: `${customDomain} || ${CONFIG.BASE_URL}/${customPath} || ${shortCode}`,
+        data: shortURL,
         config: {
           body: "square",
           eye: "frame13",
@@ -74,20 +69,30 @@ export const inputURL = async (
         "base64"
       );
 
-      // Return the short URL and QR code download link
-
-      const user = await UserModel.findOne({ _id: req.user.id });
-
-      let shortURL: string;
-      if (customDomain && customPath) {
-        shortURL = `https://${customDomain}/${customPath} || ${shortCode}`;
-      } else {
-        shortURL = `${CONFIG.BASE_URL}/${shortCode}`;
+      let URLCreatedetails: URLCreateDetails = { originalURL, shortCode };
+      if (customDomain) {
+        URLCreatedetails.customDomain = customDomain;
+      }
+      if (qrCodeImage) {
+        URLCreatedetails.qrCodeImage = qrCodeImage;
       }
 
-      user?.URLs.push(shortURL);
-      await user?.save();
+      // // Save the URL mapping to the database
+      await URLModel.create(URLCreatedetails);
 
+      // push url to user's url history
+      const user = await UserModel.findOne({ _id: req.user.id });
+      user!.URLs.push(shortURL);
+      await user!.save();
+
+      // Store the shortened URL in the cache
+      const value = await setValuesInRedis(originalURL, {
+        shortCode,
+        qrCodeImage,
+      });
+      console.log("Value set successfully", value);
+
+      // Return the short URL and QR code download link
       res.status(201).send({ shortURL, qrCodeDownloadLink: qrCodeImage });
     }
   } catch (error: any) {
@@ -104,51 +109,31 @@ export const inputURL = async (
 export const getOriginalURL = async (req: Request, res: Response) => {
   const { shortCode } = req.params;
 
-  const redisGetAsync = promisify(redisClient.get).bind(redisClient);
-  const redisSetAsync = promisify(redisClient.set).bind(redisClient);
-
   try {
     // Check if the short URL exists in the cache
-    const cachedOriginalURL = await redisGetAsync(shortCode);
+    const cachedOriginalURL = await getValuesFromRedis(shortCode);
 
-    if (cachedOriginalURL) {
+    // Track the click
+    const { "user-agent": userAgent } = req.headers;
+
+    // Get the user's IP address
+    const ipAddress = req.ip;
+    let URL: URLDoc;
+    if (Object.keys(cachedOriginalURL as object).length !== 0) {
       // Redirect to the original URL from the cache
-      res.redirect(cachedOriginalURL);
+      res.redirect((cachedOriginalURL as any).originalURL);
+
+      await clickDetails(ipAddress, userAgent, shortCode);
     } else {
       // Find the URL mapping in the database
-      const URL = await URLModel.findOne({ shortCode });
-
-      if (!URL) {
-        return res.status(404).json({ error: "URL not found" });
-      }
-
-      // Track the click
-      const { referer, "user-agent": userAgent } = req.headers;
-
-      // Get the user's IP address
-      const ipAddress = req.ip;
-
-      // Use an IP geolocation service API to get location data
-      const geolocationResponse = await axios.get(
-        `https://geolocation-api.com/api/v1/${ipAddress}/geo`
-      );
-
-      // Extract relevant location information from the response
-      const { country, city, latitude, longitude } = geolocationResponse.data;
-
-      // Store the click information in the URL document
-      URL.clicks.push({
-        referer,
-        userAgent,
-        country,
-        city,
-        latitude,
-        longitude,
-      });
-      await URL.save();
+      URL = await clickDetails(ipAddress, userAgent, shortCode);
 
       // Store the original URL in the cache
-      await redisSetAsync(shortCode, URL.originalURL);
+      const value = await setValuesInRedis(shortCode, {
+        originalURL: URL.originalURL,
+        qrCodeImage: URL.qrCodeImage,
+      });
+      console.log("Value set successfully", value);
 
       // Redirect to the original URL
       res.redirect(URL.originalURL);
@@ -156,6 +141,92 @@ export const getOriginalURL = async (req: Request, res: Response) => {
   } catch (error: any) {
     res.status(500).send({ msg: "Something went wrong! Please try again" });
   }
+
+  // Check if the short URL exists in the cache
+  // try {
+  //   const session = await mongoose.startSession();
+  //   session.startTransaction();
+
+  //   try {
+  //     // Check if the short URL exists in the cache
+  //     const cachedOriginalURL = await getValuesFromRedis(shortCode);
+
+  //     // Track the click
+  //     const { "user-agent": userAgent } = req.headers;
+
+  //     // Get the user's IP address
+  //     const ipAddress = req.ip;
+
+  //     let URL = null; // Initialize URL variable with default value
+
+  //     if (Object.keys(cachedOriginalURL as object).length !== 0) {
+  //       // Redirect to the original URL from the cache
+  //       res.redirect((cachedOriginalURL as any).originalURL);
+  //     } else {
+  //       // Find the URL mapping in the database
+  //       URL = await URLModel.findOne({ shortCode }).session(session);
+
+  //       if (!URL) {
+  //         return res.status(404).json({ msg: "URL not found" });
+  //       }
+
+  //       // Use an IP geolocation service API to get location data
+  //       const geolocationResponse = await axios.get(
+  //         `https://api.ip2location.io/?key=${
+  //           CONFIG.GEO_API_KEY as string
+  //         }&ip=${ipAddress}`
+  //       );
+
+  //       // Extract relevant location information from the response
+  //       const {
+  //         county_code: countryCode,
+  //         country_name: country,
+  //         region_name: region,
+  //         city_name: city,
+  //         latitude,
+  //         longitude,
+  //         zip_code: zipCode,
+  //         time_zone: timeZone,
+  //       } = geolocationResponse.data;
+
+  //       // Store the click information in the URL document
+  //       URL.clicks.push({
+  //         userAgent,
+  //         countryCode,
+  //         country,
+  //         region,
+  //         city,
+  //         latitude,
+  //         longitude,
+  //         zipCode,
+  //         timeZone,
+  //       });
+
+  //       await URL.save();
+  //     }
+
+  //     // Store the original URL in the cache
+  //     const value = await setValuesInRedis(shortCode, {
+  //       originalURL: URL.originalURL,
+  //       qrCodeImage: URL.qrCodeImage,
+  //     });
+
+  //     await session.commitTransaction();
+  //     session.endSession();
+
+  //     console.log("Value set successfully", value);
+
+  //     // Redirect to the original URL
+  //     res.redirect(URL.originalURL);
+  //   } catch (error: any) {
+  //     await session.abortTransaction();
+  //     session.endSession();
+  //     throw error;
+  //   }
+  // } catch (error: any) {
+  //   console.error("Error retrieving original URL:", error);
+  //   res.status(500).send({ msg: "Something went wrong! Please try again" });
+  // }
 };
 
 /**
@@ -190,7 +261,9 @@ export const getURLAnalytics = async (req: Request, res: Response) => {
 export const getUserURLHistory = async (req: Request, res: Response) => {
   try {
     // Find the URL mapping in the database
-    const user = await UserModel.findOne({ _id: req.user.id });
+    const user = await UserModel.findOne({ _id: req.user.id })
+      .populate("URLs")
+      .exec();
 
     if (user?.URLs.length === 0) {
       return res.status(404).json({ msg: "user has no URL history" });
