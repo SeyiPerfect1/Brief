@@ -56,11 +56,11 @@ const UserSchema: Schema = new mongoose.Schema<UserDoc>(
       default: "Pending",
     },
     URLs: [
-        {
-          type: Schema.Types.ObjectId,
-          ref: "URL",
-        },
-      ],
+      {
+        type: String,
+        ref: "URL",
+      },
+    ],
   },
   {
     timestamps: true,

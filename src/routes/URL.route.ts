@@ -13,9 +13,9 @@ import { URLInputSchema } from "../dto/URL.dto";
 
 const router = express.Router();
 
-router.post("/", validate(URLInputSchema), inputURL);
-router.get("/:shortcode", getOriginalURL);
-router.get("/:shortcode/analytics", getURLAnalytics);
-router.get("/history", getUserURLHistory);
+router.post("/", Authenticate, validate(URLInputSchema), inputURL);
+router.get("/history", Authenticate, getUserURLHistory);
+router.get("/:shortCode", getOriginalURL);
+router.get("/:shortCode/analytics", Authenticate, getURLAnalytics);
 
 export default router;
