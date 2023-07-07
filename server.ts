@@ -21,4 +21,4 @@ const StartServer = async () => {
   });
 };
 
-StartServer();
+export default StartServer();
