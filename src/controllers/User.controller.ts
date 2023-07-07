@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import asyncHandler from "express-async-handler";
-import UserModel from "../models/User.models";
+import { UserModel } from "../models/User.models";
 import randomstring from "randomstring";
 import * as bcrypt from "bcryptjs";
 import { signToken } from "../utility";
@@ -289,23 +289,23 @@ export async function googleAuth(req: Request, res: Response) {
  */
 export const updateUserProfile = asyncHandler(
   async (req: Request, res: Response) => {
-    const buyer = await UserModel.findById(req.user.id);
+    const user = await UserModel.findById(req.user.id);
 
     const { firstName, lastName, image } = <IUserUpdateInput>req.body;
 
-    if (buyer) {
-      buyer.firstName = firstName || buyer.firstName;
-      buyer.lastName = lastName || buyer.lastName;
-      buyer.image = image || buyer.image;
+    if (user) {
+      user.firstName = firstName || user.firstName;
+      user.lastName = lastName || user.lastName;
+      user.image = image || user.image;
 
-      const updatedBuyer = await buyer.save();
+      const updatedBuyer = await user.save();
 
       res.status(200).send({
         msg: "Profile updated successfully",
         updatedBuyer,
       });
     } else {
-      res.status(404).send("Buyer not found");
+      res.status(404).send("User not found");
     }
   }
 );

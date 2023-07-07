@@ -1,7 +1,8 @@
 export default {
   PORT: process.env.PORT,
   NODE_ENV: process.env.NODE_ENV,
-  MONGO_URI: process.env.MONGO_URI,
+  MONGO_URI_DEVELOPMENT: process.env.MONGO_URI_DEVELOPMENT,
+  MONGO_URI_TEST: process.env.MONGO_URI_TEST,
   REDIS_URI: process.env.REDIS_URI,
   ORIGIN: process.env.ORIGIN,
   JWT_SECRET: process.env.JWT_SECRET,

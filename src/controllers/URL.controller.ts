@@ -4,14 +4,13 @@ import { URLModel, URLDoc } from "../models/URL.models";
 import { IURLInput, URLCreateDetails, cachedShortURL } from "../dto/URL.dto";
 import shortid from "shortid";
 import CONFIG from "../config/environment";
-import UserModel from "../models/User.models";
+import { UserModel } from "../models/User.models";
 import axios from "axios";
 import {
   renderRedis,
   getValuesFromRedis,
   setValuesInRedis,
 } from "../config/redisConfig";
-import mongoose from "mongoose";
 import { clickDetails } from "../utility/clickDetails";
 
 /**
