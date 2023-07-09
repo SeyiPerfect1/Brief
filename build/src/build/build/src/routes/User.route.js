@@ -1,0 +1,21 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+var express_1 = __importDefault(require("express"));
+var User_controller_1 = require("../controllers/User.controller");
+var validateResource_1 = __importDefault(require("../middlewares/validateResource"));
+var middlewares_1 = require("../middlewares");
+var User_dto_1 = require("../dto/User.dto");
+var User_dto_2 = require("../dto/User.dto");
+var router = express_1.default.Router();
+router.post('/register', (0, validateResource_1.default)(User_dto_1.UserRegisterInputSchema), User_controller_1.RegisterUser);
+router.get('/confirm/:confirmationCode', User_controller_1.verifyUser);
+router.post('/resend-confirm', User_controller_1.resendUserVerificionLink);
+router.post('/login', (0, validateResource_1.default)(User_dto_2.userLoginInputSchema), User_controller_1.userLogin);
+router.post('/google', User_controller_1.googleAuth);
+router.put('/update', middlewares_1.Authenticate, User_controller_1.updateUserProfile);
+router.post('/forgot-password', User_controller_1.forgotPassword);
+router.post('/reset-password/:id/:token', User_controller_1.resetPassword);
+exports.default = router;
